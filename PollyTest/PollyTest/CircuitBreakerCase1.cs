@@ -9,22 +9,31 @@ namespace PollyTest
     {
         public async Task Run()
         {
+
             var httpClient = new HttpClient();
 
-            await Polly.Policy
+            var p = Polly.Policy
                 .Handle<HttpRequestException>()
-                .WaitAndRetryAsync(3, (i) =>
+                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(3));
+
+            for (var i = 0; i < 1000; i++)
+            {
+                try
                 {
-                    return TimeSpan.FromSeconds(i);
-                }, (ex, time) => {
-                    Console.WriteLine($"{time} retry...");
-                })
-                .ExecuteAsync(async () => {
-                    var response = await httpClient.GetAsync("https://official-joke-api.appspot.com/random_joke");
-                    response.EnsureSuccessStatusCode();
-                    var version = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine(version);
-                });
+                    await p.ExecuteAsync(async () => {
+                        var response = await httpClient.GetAsync("https://official-joke-api.appspot.com/random_joke");
+                        response.EnsureSuccessStatusCode();
+                        var version = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine(version);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+                await Task.Delay(1000);
+            }
         }
     }
 
