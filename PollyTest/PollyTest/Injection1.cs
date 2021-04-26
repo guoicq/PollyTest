@@ -7,10 +7,10 @@ using Polly;
 
 namespace PollyTest
 {
-    public class App
+    public class Injection1
     {
         private readonly IApiClient apiClient;
-        public App(IApiClient apiClient)
+        public Injection1(IApiClient apiClient)
         {
             this.apiClient = apiClient;
         }
