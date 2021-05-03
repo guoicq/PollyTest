@@ -9,6 +9,8 @@ namespace PollyTest
     {
         public async Task Run()
         {
+            var n = 0;
+
             await Polly.Policy
                 .Handle<HttpRequestException>()
                 .Or<TimeoutException>()

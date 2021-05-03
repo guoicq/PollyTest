@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.CircuitBreaker;
@@ -14,73 +16,44 @@ namespace PollyTest
 {
     class Program
     {
-        static void Main(string[] args)
+        private const string EnvironmentVariablePrefix = "POLLY_TEST_";
+
+        public static async Task Main(string[] args)
         {
-            var provider = BuildServiceProvider();
+            var host = CreateServiceHost(args);
+            //await host.RunAsync();
 
-            _ = provider.GetService<App>().Run();
-
-            Console.ReadKey();
-        }
-
-        private static ServiceProvider BuildServiceProvider()
-        {
-            // Setup configuration
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true);
-            var configuration = builder.Build();
-
-            var services = new ServiceCollection();
-
-            services.AddSingleton<IConfiguration>(configuration)
-                .AddLogging(loggingBuilder =>
-                {
-                    loggingBuilder.AddConsole();
-                });
-
-            services.AddHttpClient<IApiClient, ApiClient>( client => { 
-                    client.BaseAddress = new Uri(configuration.GetValue<string>("ApiServer.Url"));
-                })
-                .AddPolicyHandler(GetRetryPolicy())
-                .AddPolicyHandler(GetCircuitBreakerPolicy());
-
-
-            ConfigureServices(services);
-
-            return services.BuildServiceProvider();
-        }
-
-        private static IServiceCollection ConfigureServices(IServiceCollection services)
-        {
-
-            services.AddScoped<App>();
-            return services;
-        }
-
-        private static AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy()
-        {
-            var p = HttpPolicyExtensions
-                        .HandleTransientHttpError()
-                        .Or<BrokenCircuitException>()
-                        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.NotFound)
-                        .WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 100));
-
-            return p;
+            await host.Services.GetService<App>().Run();
 
         }
 
-        private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+        private static IHost CreateServiceHost(string[] args)
         {
-            var p = HttpPolicyExtensions.HandleTransientHttpError()
-                                      .CircuitBreakerAsync(3, TimeSpan.FromSeconds(3), 
-                                      (dr, ts) => { 
-                                          Console.WriteLine("OnBreak"); 
-                                      }, () => { 
-                                          Console.WriteLine("OnReset"); 
-                                      });
-            return p;
+            var host = new HostBuilder()
+                        .ConfigureHostConfiguration(hostConfig =>
+                        {
+                            hostConfig.SetBasePath(Directory.GetCurrentDirectory());
+                            hostConfig.AddJsonFile("hostsettings.json", true);
+                            hostConfig.AddEnvironmentVariables(EnvironmentVariablePrefix);
+                            hostConfig.AddCommandLine(args);
+                        })
+                        .ConfigureAppConfiguration((hostingContext, config) =>
+                        {
+                            config.SetBasePath(hostingContext.HostingEnvironment.ContentRootPath);
+                            config.AddJsonFile("appsettings.json", true, true);
+                            config.AddJsonFile($"appsettings.{hostingContext.HostingEnvironment.EnvironmentName}.json", true);
+                        })
+                        .ConfigureServices((hostContext, services) =>
+                        {
+                            services.AddLogging(loggingBuilder =>
+                            {
+                                //loggingBuilder.AddConsole();
+                            });
 
+                            services.ConfigureServices(hostContext.Configuration);
+                        })
+                        .Build();
+            return host;
         }
 
     }
