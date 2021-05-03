@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections;
 using System.Threading.Tasks;
 using Polly;
+using System.Threading;
 
 namespace PollyTest
 {
@@ -17,7 +18,7 @@ namespace PollyTest
 
         public async Task Run()
         {
-            var result = await apiClient.GetPost();
+            var result = await apiClient.GetPostAsync();
             Console.WriteLine(result);
         }
 

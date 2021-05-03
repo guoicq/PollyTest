@@ -8,11 +8,13 @@ namespace PollyTest
     {
         public async Task Run()
         {
+            var n = 0;
+
             await Polly.Policy
                 .Handle<Exception>()
                 .RetryAsync()
                 .ExecuteAsync(async () => {
-                    Console.WriteLine(DateTime.Now.ToString());
+                    Console.WriteLine(n);
                     await Task.Delay(1000);
                     throw new Exception();
                 });

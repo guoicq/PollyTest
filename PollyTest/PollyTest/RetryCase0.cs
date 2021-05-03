@@ -8,7 +8,8 @@ namespace PollyTest
     {
         public async Task Run()
         {
-            Console.WriteLine(DateTime.Now.ToString());
+            var n = 0;
+            Console.WriteLine(n);
             await Task.Delay(1000);
         }
     }

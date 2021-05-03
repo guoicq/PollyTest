@@ -17,8 +17,9 @@ namespace PollyTest
 
         public async Task Run()
         {
-            var result = await apiClient.GetPost();
-            Console.WriteLine(result);
+            //var result = await apiClient.GetPostAsync();
+            //Console.WriteLine(result);
+            await new RetryCase1().Run();
         }
 
     }
